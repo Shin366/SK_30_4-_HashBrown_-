@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Env / secrets (REQ-NF-005)
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Temp doc extraction artifacts
+_doc_raw.xml
+_doc_text.txt
+
+# Uploaded / analyst data (must never be committed)
+analyst-data/
+*.evtx
+
+# Forensic input & incident reports — real host/incident data, never publish
+docs/
+*.mft
+
+# Transient build / preview dirs
+_run/
+_run/**
+
+# Generated TS / Vite outputs
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
