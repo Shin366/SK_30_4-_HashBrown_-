@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { AnalysisResult, IOCType } from '@/types';
+import type { AnalysisResult, IOCType, ActorConfidence } from '@/types';
 import { Card } from '@/components/common/Card';
 import { SeverityBadge, ConfidenceTag } from '@/components/common/Badge';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -28,8 +28,81 @@ export function ThreatMappingPanel({ result }: { result: AnalysisResult }) {
   const iocTypes = Array.from(new Set(result.iocs.map((i) => i.type)));
   const iocs = result.iocs.filter((i) => (iocType === 'all' ? true : i.type === iocType));
 
+  const attr = result.attribution;
+
   return (
     <div className="col" style={{ gap: 18 }}>
+      {/* 공격자 특정 (추정) */}
+      {attr && (
+        <Card
+          className="reveal"
+          style={delay(0)}
+          title="공격자 특정 (추정)"
+          subtitle={`유사 TTP 위협 그룹 · 탐지 도구 ${attr.detectedTools.length}종 · 확정 귀속 아님(참고용)`}
+        >
+          <p className="text-sm" style={{ lineHeight: 1.6, marginBottom: 12 }}>{attr.summary}</p>
+
+          {attr.detectedTools.length > 0 && (
+            <div className="row wrap" style={{ gap: 5, marginBottom: 14, alignItems: 'center' }}>
+              <span className="text-xs muted">탐지 도구:</span>
+              {attr.detectedTools.map((t) => (
+                <span key={t} className="badge badge-high" style={{ fontSize: 10.5 }}>{t}</span>
+              ))}
+            </div>
+          )}
+
+          {attr.candidates.length === 0 ? (
+            <EmptyState title="유사 위협 그룹 없음" hint="탐지된 TTP·도구가 특정 그룹 프로파일과 유의미하게(2개 지표 이상) 겹치지 않습니다." />
+          ) : (
+            <div className="col" style={{ gap: 10 }}>
+              {attr.candidates.map((c, i) => (
+                <div key={c.id} className="reveal" style={{ ...delay(80 + i * 60), background: 'var(--bg-1)', border: '1px solid var(--surface-border)', borderRadius: 'var(--r-md)', padding: 14 }}>
+                  <div className="spread" style={{ marginBottom: 6, gap: 8 }}>
+                    <span className="row wrap" style={{ gap: 8, minWidth: 0, alignItems: 'center' }}>
+                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 650, fontSize: 14 }}>{i + 1}. {c.name}</span>
+                      <a href={c.url} target="_blank" rel="noreferrer" className="row mono text-xs muted" style={{ gap: 3 }}>{c.id} <IconExternal /></a>
+                      <span className="pill text-xs">{c.origin}</span>
+                    </span>
+                    <span className="row" style={{ gap: 8, flexShrink: 0 }}>
+                      <span className={`badge ${confBadge(c.confidence)}`} style={{ fontSize: 10.5 }}>신뢰도 {confKo(c.confidence)}</span>
+                      <span className="mono text-xs" style={{ width: 36, textAlign: 'right' }}>{(c.score * 100).toFixed(0)}%</span>
+                    </span>
+                  </div>
+                  <div style={{ height: 5, background: 'var(--bg-3)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                    <div style={{ width: `${c.score * 100}%`, height: '100%', background: confHex(c.confidence) }} />
+                  </div>
+                  <div className="text-sm muted" style={{ lineHeight: 1.5, marginBottom: 8 }}>
+                    {c.note} <span className="dim">· 동기: {c.motive}</span>
+                  </div>
+                  <div className="col" style={{ gap: 5 }}>
+                    {c.matchedTools.length > 0 && (
+                      <div className="row wrap" style={{ gap: 4, alignItems: 'center' }}>
+                        <span className="text-xs muted" style={{ width: 60, flexShrink: 0 }}>일치 도구</span>
+                        {c.matchedTools.map((t) => <span key={t} className="badge badge-critical" style={{ fontSize: 10 }}>{t}</span>)}
+                      </div>
+                    )}
+                    {c.matchedTechniques.length > 0 && (
+                      <div className="row wrap" style={{ gap: 4, alignItems: 'center' }}>
+                        <span className="text-xs muted" style={{ width: 60, flexShrink: 0 }}>일치 기법</span>
+                        {c.matchedTechniques.map((t) => <span key={t} className="pill mono text-xs">{t}</span>)}
+                      </div>
+                    )}
+                    {c.aliases.length > 0 && <div className="text-xs dim">별칭: {c.aliases.join(', ')}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="text-xs muted" style={{ lineHeight: 1.6, borderTop: '1px solid var(--surface-border)', paddingTop: 10, marginTop: 12 }}>
+            <b>추정의 한계</b>
+            <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+              {attr.caveats.map((cv, i) => <li key={i} style={{ marginBottom: 2 }}>{cv}</li>)}
+            </ul>
+          </div>
+        </Card>
+      )}
+
       {/* ATT&CK 기법 */}
       <Card className="reveal" style={delay(0)} title="MITRE ATT&CK 기법 매핑" subtitle={`${result.techniques.length}개 기법 · kill-chain 정렬 · 근거 동반`}>
         {result.techniques.length === 0 ? (
@@ -178,6 +251,17 @@ export function ThreatMappingPanel({ result }: { result: AnalysisResult }) {
       </span>
     </div>
   );
+}
+
+function confKo(c: ActorConfidence): string {
+  return c === 'high' ? '높음' : c === 'medium' ? '중간' : '낮음';
+}
+function confBadge(c: ActorConfidence): string {
+  return c === 'high' ? 'badge-high' : c === 'medium' ? 'badge-medium' : 'badge-low';
+}
+function confHex(c: ActorConfidence): string {
+  // 낮음은 중립 회색(초록=긍정 오인 방지). 유사도 막대 길이로 크기, 배지로 신뢰도 표기.
+  return c === 'high' ? SEVERITY_HEX.high : c === 'medium' ? SEVERITY_HEX.medium : '#a1a1aa';
 }
 
 function pillSel(active: boolean): CSSProperties {

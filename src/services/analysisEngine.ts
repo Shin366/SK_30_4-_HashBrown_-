@@ -7,6 +7,7 @@ import { mapThreats } from './attackMapper';
 import { analyzeTraffic } from './trafficAnalyzer';
 import { buildAttackFlow, buildTimeline } from './timelineBuilder';
 import { buildIntrusionHypothesis } from './intrusionHypothesis';
+import { buildAttribution } from './actorAttribution';
 import { generateReport } from './reportGenerator';
 import { isMftTable, parseMft } from './mftParser';
 import { analyzeMft } from './mftAnalyzer';
@@ -45,6 +46,7 @@ function analyzeMftResult(ingest: IngestResult, nowIso: string): AnalysisResult 
   const ml = analyzeMftMl(records);
   const attackFlow = buildAttackFlow(techniques);
   const intrusion = buildIntrusionHypothesis(techniques, timeline, iocs);
+  const attribution = buildAttribution(techniques, iocs, anomalies, mft.findings);
   const report = generateReport(
     {
       logs: [],
@@ -78,6 +80,7 @@ function analyzeMftResult(ingest: IngestResult, nowIso: string): AnalysisResult 
     mft,
     ml,
     intrusion,
+    attribution,
   };
 }
 
@@ -96,6 +99,7 @@ function analyzeLogResult(
   const timeline = buildTimeline(anomalies);
   const attackFlow = buildAttackFlow(techniques);
   const intrusion = buildIntrusionHypothesis(techniques, timeline, iocs);
+  const attribution = buildAttribution(techniques, iocs, anomalies);
   const report = generateReport({ logs, anomalies, iocs, techniques, cves, traffic }, nowIso);
   if (ml) report.factsVsAssessments.facts.push(`[ML] ${ml.summary}`);
 
@@ -116,6 +120,7 @@ function analyzeLogResult(
     report,
     ml,
     intrusion,
+    attribution,
   };
 }
 

@@ -279,6 +279,33 @@ export interface MlAnalysis {
 export type AnalysisKind = 'log' | 'mft';
 
 // ---------------------------------------------------------------------
+// 공격자 특정 (추정) — 탐지된 ATT&CK 기법·도구를 알려진 위협 그룹의
+// TTP 프로파일과 대조해 "유사 위협 그룹"을 유사도순으로 제시. 확정 귀속이 아님.
+// ---------------------------------------------------------------------
+export type ActorConfidence = 'low' | 'medium' | 'high';
+
+export interface ActorCandidate {
+  id: string; // ATT&CK Group ID(Gxxxx) 또는 큐레이션 식별자
+  name: string;
+  aliases: string[];
+  origin: string; // 배후/유형 (예: '러시아 국가배후', '랜섬웨어 크라임')
+  motive: string; // 동기 (첩보/금전 등)
+  score: number; // 0..1 유사도
+  confidence: ActorConfidence;
+  matchedTools: string[]; // 일치한 도구(라벨)
+  matchedTechniques: string[]; // 일치한 ATT&CK 기법 ID
+  note: string; // 한 줄 해설
+  url: string; // attack.mitre.org 레퍼런스
+}
+
+export interface ActorAttribution {
+  candidates: ActorCandidate[];
+  detectedTools: string[]; // 탐지된 도구(라벨)
+  summary: string;
+  caveats: string[]; // 추정임을 명시하는 한계
+}
+
+// ---------------------------------------------------------------------
 // AI 추정 침입 경로 (Assessment) — 탐지 지표를 kill-chain 순으로 재구성해
 // "공격자가 어떻게 침입·전개했는지"를 서술하는 추정 가설. 사실이 아닌 추정.
 // ---------------------------------------------------------------------
@@ -325,6 +352,7 @@ export interface AnalysisResult {
   mft?: MftAnalysis; // kind === 'mft' 일 때
   ml?: MlAnalysis; // 머신러닝 계층 결과 (하이브리드)
   intrusion?: IntrusionHypothesis; // AI 추정 침입 경로 (매핑 기법 존재 시)
+  attribution?: ActorAttribution; // 공격자 특정 (추정) — 유사 위협 그룹
 }
 
 export type AnalysisStatus = 'idle' | 'parsing' | 'analyzing' | 'done' | 'error';
