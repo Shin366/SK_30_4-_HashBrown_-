@@ -82,6 +82,33 @@ function buildIntrusionSection(r: AnalysisResult): string {
   </table>`;
 }
 
+/** 공격자 특정(추정) — 유사 TTP 위협 그룹 상위 3곳(참고용, 확정 귀속 아님). */
+function buildActorSection(r: AnalysisResult): string {
+  const at = r.attribution;
+  if (!at || !at.candidates.length) return '';
+  const confKo = (c: string) => (c === 'high' ? '높음' : c === 'medium' ? '중간' : '낮음');
+  const rows = at.candidates
+    .slice(0, 3)
+    .map(
+      (c) => `<tr>
+        <td><b>${esc(c.name)}</b> <span class="hint">${esc(c.id)}</span><br><span class="req">${esc(c.origin)} · ${esc(c.motive)}</span></td>
+        <td class="c">${esc((c.score * 100).toFixed(0))}%<br><span class="req">신뢰도 ${confKo(c.confidence)}</span></td>
+        <td>${esc(c.matchedTools.join(', ') || '—')}</td>
+        <td class="val">${esc(c.matchedTechniques.join(', ') || '—')}</td>
+      </tr>`,
+    )
+    .join('');
+  return `
+  <h2>공격자 특정 <span class="hint">(추정 · 확정 귀속 아님)</span></h2>
+  <p>탐지된 도구(${esc(at.detectedTools.join(', ') || '—')})와 ATT&amp;CK 기법이 유사한 알려진 위협 그룹을 유사도순으로 제시한다(참고용).</p>
+  <table class="ti">
+    <colgroup><col style="width:34%"><col style="width:12%"><col style="width:27%"><col style="width:27%"></colgroup>
+    <tr><th>유사 위협 그룹</th><th>유사도</th><th>일치 도구</th><th>일치 기법</th></tr>
+    ${rows}
+  </table>
+  <p class="req">※ Mimikatz·PsExec 등 공개·상용 도구는 다수 그룹이 공유하므로 도구 일치만으로 특정 그룹을 단정할 수 없다. 확정 귀속에는 C2 인프라·악성코드 유사성·피해자학 등 추가 교차분석이 필요하다.</p>`;
+}
+
 /** 주요 탐지 이상징후 — 원본 스니펫 포함(핵심 근거). 상위 12건. */
 function buildEvidenceSection(r: AnalysisResult): string {
   if (!r.anomalies.length) return '';
@@ -187,6 +214,7 @@ export function buildWordReport(r: AnalysisResult): string {
   <p class="req"><b>추정(분석가 검증 필요)</b></p>
   <ul>${assessments || '<li>—</li>'}</ul>
   ${buildIntrusionSection(r)}
+  ${buildActorSection(r)}
   ${buildEvidenceSection(r)}
   ${buildRecommendation(r)}
 
